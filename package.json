@@ -1,0 +1,53 @@
+{
+  "name": "qtau",
+  "productName": "QtAU",
+  "version": "0.1.0",
+  "description": "QtAU — Qt AddonUpdater. Updates git-based WoW addons and starts your launcher or client.",
+  "author": "JercyJustice",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "call-bind-apply-helpers": "^1.0.2",
+    "isomorphic-git": "^1.33.1"
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.qtau.app",
+    "productName": "QtAU",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "renderer/**/*",
+      "package.json",
+      "node_modules/call-bind-apply-helpers/**/*"
+    ],
+    "asar": true,
+    "includeSubNodeModules": true,
+    "afterPack": "./scripts/afterPack.js",
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "QtAU.exe"
+    }
+  }
+}
