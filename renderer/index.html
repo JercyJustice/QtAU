@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'" />
@@ -9,15 +9,15 @@
   <body>
     <div class="app">
       <header class="header">
-        <div class="header-status" id="busyLabel">Bereit</div>
+        <div class="header-status" id="busyLabel">Ready</div>
         <div class="header-actions">
-          <button type="button" class="icon-btn" id="gitBtn" title="Git hinzufügen" aria-label="Git hinzufügen">
+          <button type="button" class="icon-btn" id="gitBtn" title="Add git" aria-label="Add git">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
           </button>
           <button type="button" class="icon-btn" id="logBtn" title="Log" aria-label="Log">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" /></svg>
           </button>
-          <button type="button" class="icon-btn" id="settingsBtn" title="Einstellungen" aria-label="Einstellungen">
+          <button type="button" class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="3" />
               <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
@@ -35,34 +35,34 @@
       </section>
 
       <footer class="footer">
-        <button type="button" class="ghost" id="scanBtn">Erneut scannen</button>
-        <button type="button" class="ghost" id="updateBtn">Alle aktualisieren</button>
-        <button type="button" class="primary" id="playBtn">Launcher starten</button>
+        <button type="button" class="ghost" id="scanBtn">Rescan</button>
+        <button type="button" class="ghost" id="updateBtn">Update all</button>
+        <button type="button" class="primary" id="playBtn">Launch</button>
       </footer>
     </div>
 
     <div class="overlay hidden" id="settingsOverlay">
       <div class="sheet" role="dialog" aria-labelledby="settingsTitle">
         <div class="sheet-head">
-          <h2 id="settingsTitle">Einstellungen</h2>
-          <button type="button" class="icon-btn" data-close="settingsOverlay" title="Schließen" aria-label="Schließen">
+          <h2 id="settingsTitle">Settings</h2>
+          <button type="button" class="icon-btn" data-close="settingsOverlay" title="Close" aria-label="Close">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
           </button>
         </div>
         <label class="path-row">
-          <span>Addons-Ordner</span>
+          <span>AddOns folder</span>
           <input id="addonsDir" type="text" spellcheck="false" />
-          <button type="button" class="ghost" id="pickAddons">Wählen</button>
+          <button type="button" class="ghost" id="pickAddons">Browse</button>
         </label>
         <label class="path-row">
           <span>Launcher / Client</span>
           <input id="launcherPath" type="text" spellcheck="false" />
-          <button type="button" class="ghost" id="pickLauncher">Wählen</button>
+          <button type="button" class="ghost" id="pickLauncher">Browse</button>
         </label>
         <div class="toggles">
-          <label><input type="checkbox" id="autoUpdate" /> Beim Start aktualisieren</label>
-          <label><input type="checkbox" id="autoLaunch" /> Danach Launcher starten</label>
-          <label><input type="checkbox" id="forceUpdate" /> Lokale Änderungen überschreiben</label>
+          <label><input type="checkbox" id="autoUpdate" /> Update on start</label>
+          <label><input type="checkbox" id="autoLaunch" /> Launch after update</label>
+          <label><input type="checkbox" id="forceUpdate" /> Overwrite local changes</label>
         </div>
       </div>
     </div>
@@ -70,15 +70,15 @@
     <div class="overlay hidden" id="gitOverlay">
       <div class="sheet" role="dialog" aria-labelledby="gitTitle">
         <div class="sheet-head">
-          <h2 id="gitTitle">Git hinzufügen</h2>
-          <button type="button" class="icon-btn" data-close="gitOverlay" title="Schließen" aria-label="Schließen">
+          <h2 id="gitTitle">Add git</h2>
+          <button type="button" class="icon-btn" data-close="gitOverlay" title="Close" aria-label="Close">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
           </button>
         </div>
         <div class="git-fields">
           <input id="gitUrl" type="text" placeholder="https://github.com/user/addon.git" spellcheck="false" />
-          <input id="gitFolder" type="text" placeholder="Ordner (optional)" spellcheck="false" />
-          <button type="button" class="primary" id="addGit">Hinzufügen</button>
+          <input id="gitFolder" type="text" placeholder="Folder (optional)" spellcheck="false" />
+          <button type="button" class="primary" id="addGit">Add</button>
         </div>
       </div>
     </div>
@@ -88,8 +88,8 @@
         <div class="sheet-head">
           <h2 id="logTitle">Log</h2>
           <div class="sheet-head-actions">
-            <button type="button" class="text" id="clearLog">Leeren</button>
-            <button type="button" class="icon-btn" data-close="logOverlay" title="Schließen" aria-label="Schließen">
+            <button type="button" class="text" id="clearLog">Clear</button>
+            <button type="button" class="icon-btn" data-close="logOverlay" title="Close" aria-label="Close">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
             </button>
           </div>

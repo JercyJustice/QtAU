@@ -12,11 +12,11 @@ function isUnsafeFolder(name) {
 
 function normalizeGitUrl(input) {
   let url = String(input || '').trim();
-  if (!url) throw new Error('Leere Git-URL');
+  if (!url) throw new Error('Empty git URL');
   url = url.replace(/\/+$/, '');
   if (!url.endsWith('.git')) url += '.git';
   const parsed = new URL(url);
-  if (parsed.protocol !== 'https:') throw new Error('Nur HTTPS-Git-URLs sind erlaubt');
+  if (parsed.protocol !== 'https:') throw new Error('Only HTTPS git URLs are allowed');
   return parsed.href.replace(/\/+$/, '');
 }
 
@@ -125,7 +125,7 @@ async function inspectAddon(addonsDir, folder, bindings) {
   const base = { folder, dir, status: 'local', hasToc: false };
 
   if (!(await pathExists(tocPath))) {
-    return { ...base, status: 'invalid', error: 'Keine .toc-Datei' };
+    return { ...base, status: 'invalid', error: 'Missing .toc file' };
   }
 
   const toc = readToc(await fsp.readFile(tocPath, 'utf8'));
@@ -151,7 +151,7 @@ async function inspectAddon(addonsDir, folder, bindings) {
         ...info,
         status: 'outOfDate',
         git: bound,
-        error: 'Kein Git-Repo, Binding vorhanden — wird beim Update geklont'
+        error: 'Not a git repo; binding will clone on update'
       };
     }
     return { ...info, status: 'local', git: suggestedGit || '' };
@@ -171,7 +171,7 @@ async function inspectAddon(addonsDir, folder, bindings) {
       (await resolveOid(dir, `${remote.remote}/HEAD`));
 
     if (dirty) {
-      return { ...info, status: 'dirty', error: 'Lokale Änderungen — Update übersprungen' };
+      return { ...info, status: 'dirty', error: 'Local changes — update skipped' };
     }
     if (remoteOid && localOid && remoteOid === localOid) {
       return { ...info, status: 'upToDate' };
@@ -181,7 +181,7 @@ async function inspectAddon(addonsDir, folder, bindings) {
     return {
       ...info,
       status: 'error',
-      error: err && err.message ? err.message : 'Verify fehlgeschlagen'
+      error: err && err.message ? err.message : 'Verify failed'
     };
   }
 }
@@ -198,17 +198,17 @@ async function listFolders(addonsDir) {
 async function scan(addonsDir, { bindings = {}, onProgress } = {}) {
   const emit = (payload) => onProgress && onProgress(payload);
   if (!addonsDir) {
-    emit({ type: 'log', level: 'error', message: 'Kein Addons-Ordner gesetzt' });
-    return { addons: [], error: 'Kein Addons-Ordner gesetzt' };
+    emit({ type: 'log', level: 'error', message: 'No AddOns folder set' });
+    return { addons: [], error: 'No AddOns folder set' };
   }
   if (!(await pathExists(addonsDir))) {
-    emit({ type: 'log', level: 'error', message: `Ordner nicht gefunden: ${addonsDir}` });
-    return { addons: [], error: `Ordner nicht gefunden: ${addonsDir}` };
+    emit({ type: 'log', level: 'error', message: `Folder not found: ${addonsDir}` });
+    return { addons: [], error: `Folder not found: ${addonsDir}` };
   }
 
-  emit({ type: 'busy', value: true, label: 'Scanne Addons…' });
+  emit({ type: 'busy', value: true, label: 'Scanning addons…' });
   const folders = await listFolders(addonsDir);
-  emit({ type: 'log', level: 'info', message: `${folders.length} Addon-Ordner gefunden` });
+  emit({ type: 'log', level: 'info', message: `Found ${folders.length} addon folder(s)` });
 
   const addons = await mapPool(folders, 4, async (folder) => {
     emit({
@@ -219,19 +219,19 @@ async function scan(addonsDir, { bindings = {}, onProgress } = {}) {
     emit({ type: 'addon', addon });
     const label =
       addon.status === 'upToDate'
-        ? 'aktuell'
+        ? 'up to date'
         : addon.status === 'outOfDate'
-          ? 'Update verfügbar'
+          ? 'update available'
           : addon.status === 'dirty'
-            ? 'lokale Änderungen'
+            ? 'local changes'
             : addon.status === 'local'
-              ? 'kein Git'
+              ? 'no git'
               : addon.status;
     emit({ type: 'log', level: 'info', message: `${folder}: ${label}` });
     return addon;
   });
 
-  emit({ type: 'busy', value: false, label: 'Bereit' });
+  emit({ type: 'busy', value: false, label: 'Ready' });
   return { addons };
 }
 
@@ -306,7 +306,7 @@ async function updateOne(addonsDir, folder, { force, bindings, onProgress }) {
   const emit = (payload) => onProgress && onProgress(payload);
   const dir = path.join(addonsDir, folder);
   emit({ type: 'addon', addon: { folder, status: 'updating' } });
-  emit({ type: 'log', level: 'info', message: `Aktualisiere ${folder}…` });
+  emit({ type: 'log', level: 'info', message: `Updating ${folder}…` });
 
   try {
     const gitRepo = await pathExists(path.join(dir, '.git'));
@@ -316,7 +316,7 @@ async function updateOne(addonsDir, folder, { force, bindings, onProgress }) {
 
     if (!remote) {
       const url = bound;
-      if (!url) throw new Error('Kein Git-Remote');
+      if (!url) throw new Error('No git remote');
       await cloneReplace(dir, normalizeGitUrl(url), undefined, onProgress);
     } else {
       const dirty = await isDirty(dir);
@@ -326,7 +326,7 @@ async function updateOne(addonsDir, folder, { force, bindings, onProgress }) {
         emit({
           type: 'log',
           level: 'warn',
-          message: `${folder}: lokale Änderungen, übersprungen`
+          message: `${folder}: local changes, skipped`
         });
         return addon;
       }
@@ -337,7 +337,7 @@ async function updateOne(addonsDir, folder, { force, bindings, onProgress }) {
 
     const addon = await inspectAddon(addonsDir, folder, bindings);
     emit({ type: 'addon', addon: { ...addon, status: addon.status === 'error' ? addon.status : 'upToDate' } });
-    emit({ type: 'log', level: 'ok', message: `${folder}: aktualisiert` });
+    emit({ type: 'log', level: 'ok', message: `${folder}: updated` });
     return { ...addon, status: 'upToDate' };
   } catch (err) {
     const message = err && err.message ? err.message : String(err);
@@ -354,7 +354,7 @@ async function updateOne(addonsDir, folder, { force, bindings, onProgress }) {
 
 async function update(addonsDir, { folders, force = false, bindings = {}, onProgress } = {}) {
   const emit = (payload) => onProgress && onProgress(payload);
-  if (!addonsDir) return { results: [], error: 'Kein Addons-Ordner gesetzt' };
+  if (!addonsDir) return { results: [], error: 'No AddOns folder set' };
 
   let targets = folders;
   if (!targets || !targets.length) {
@@ -369,32 +369,32 @@ async function update(addonsDir, { folders, force = false, bindings = {}, onProg
   }
 
   if (!targets.length) {
-    emit({ type: 'log', level: 'ok', message: 'Nichts zu aktualisieren' });
-    emit({ type: 'busy', value: false, label: 'Bereit' });
+    emit({ type: 'log', level: 'ok', message: 'Nothing to update' });
+    emit({ type: 'busy', value: false, label: 'Ready' });
     return { results: [] };
   }
 
-  emit({ type: 'busy', value: true, label: `Aktualisiere ${targets.length} Addon(s)…` });
+  emit({ type: 'busy', value: true, label: `Updating ${targets.length} addon(s)…` });
   const results = [];
   for (const folder of targets) {
     results.push(await updateOne(addonsDir, folder, { force, bindings, onProgress }));
   }
-  emit({ type: 'busy', value: false, label: 'Bereit' });
+  emit({ type: 'busy', value: false, label: 'Ready' });
   return { results };
 }
 
 async function install(addonsDir, url, folderName, onProgress) {
   const emit = (payload) => onProgress && onProgress(payload);
-  if (!addonsDir) throw new Error('Kein Addons-Ordner gesetzt');
+  if (!addonsDir) throw new Error('No AddOns folder set');
   await fsp.mkdir(addonsDir, { recursive: true });
 
   const gitUrl = normalizeGitUrl(url);
   const folder = folderName && folderName.trim() ? folderName.trim() : folderFromUrl(gitUrl);
-  if (isUnsafeFolder(folder)) throw new Error(`Ungültiger Ordnername: ${folder}`);
+  if (isUnsafeFolder(folder)) throw new Error(`Invalid folder name: ${folder}`);
 
-  emit({ type: 'log', level: 'info', message: `Klone ${gitUrl} → ${folder}` });
+  emit({ type: 'log', level: 'info', message: `Cloning ${gitUrl} → ${folder}` });
   emit({ type: 'addon', addon: { folder, title: folder, git: gitUrl, status: 'updating' } });
-  emit({ type: 'busy', value: true, label: `Klone ${folder}…` });
+  emit({ type: 'busy', value: true, label: `Cloning ${folder}…` });
 
   const dir = path.join(addonsDir, folder);
   if (await pathExists(path.join(dir, '.git'))) {
@@ -418,8 +418,8 @@ async function install(addonsDir, url, folderName, onProgress) {
   await cloneReplace(dir, gitUrl, ref, onProgress);
   const addon = await inspectAddon(addonsDir, folder, { [folder]: gitUrl });
   emit({ type: 'addon', addon });
-  emit({ type: 'log', level: 'ok', message: `${folder}: installiert` });
-  emit({ type: 'busy', value: false, label: 'Bereit' });
+  emit({ type: 'log', level: 'ok', message: `${folder}: installed` });
+  emit({ type: 'busy', value: false, label: 'Ready' });
   return { ok: true, folder, git: gitUrl, addon };
 }
 

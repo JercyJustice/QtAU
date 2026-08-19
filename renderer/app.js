@@ -1,14 +1,14 @@
 const api = window.qtau;
 
 const STATUS_LABEL = {
-  checking: 'Prüfe…',
-  updating: 'Aktualisiere…',
-  upToDate: 'Aktuell',
+  checking: 'Checking…',
+  updating: 'Updating…',
+  upToDate: 'Up to date',
   outOfDate: 'Update',
-  local: 'Kein Git',
-  dirty: 'Lokal geändert',
-  error: 'Fehler',
-  invalid: 'Ungültig'
+  local: 'No git',
+  dirty: 'Local changes',
+  error: 'Error',
+  invalid: 'Invalid'
 };
 
 const PANELS = {
@@ -37,7 +37,7 @@ let busy = false;
 let tooltipEl;
 
 function log(message, level = 'info') {
-  const time = new Date().toLocaleTimeString('de-DE', { hour12: false });
+  const time = new Date().toLocaleTimeString('en-GB', { hour12: false });
   const line = document.createElement('div');
   line.className = level;
   line.textContent = `[${time}] ${message}`;
@@ -47,7 +47,7 @@ function log(message, level = 'info') {
 
 function setBusy(value, label) {
   busy = value;
-  els.busyLabel.textContent = label || (value ? 'Arbeitet…' : 'Bereit');
+  els.busyLabel.textContent = label || (value ? 'Working…' : 'Ready');
   document.getElementById('scanBtn').disabled = value;
   document.getElementById('updateBtn').disabled = value;
   document.getElementById('addGit').disabled = value;
@@ -92,7 +92,7 @@ function hoverText(addon) {
     addon.notes,
     addon.folder !== title ? addon.folder : '',
     addon.version ? `Version ${addon.version}` : '',
-    addon.author ? `Autor: ${addon.author}` : '',
+    addon.author ? `Author: ${addon.author}` : '',
     addon.branch ? `Branch: ${addon.branch}` : '',
     addon.git || addon.suggestedGit || '',
     addon.error || ''
@@ -130,9 +130,9 @@ function hideTooltip() {
 
 function renderAddons() {
   hideTooltip();
-  els.addonCount.textContent = addons.length ? `${addons.length} gefunden` : '';
+  els.addonCount.textContent = addons.length ? `${addons.length} found` : '';
   if (!addons.length) {
-    els.addonList.innerHTML = '<div class="empty">Kein Addon gefunden. Addons-Ordner in den Einstellungen wählen.</div>';
+    els.addonList.innerHTML = '<div class="empty">No addons found. Choose an AddOns folder in Settings.</div>';
     return;
   }
 
@@ -164,7 +164,7 @@ function renderAddons() {
     }
     if (addon.status === 'local') {
       actions.appendChild(
-        actionButton('Binden', () => {
+        actionButton('Bind', () => {
           els.gitFolder.value = addon.folder;
           els.gitUrl.value = addon.suggestedGit || addon.git || '';
           openPanel('git');
@@ -212,7 +212,7 @@ async function savePaths() {
 }
 
 async function scan() {
-  setBusy(true, 'Scanne Addons…');
+  setBusy(true, 'Scanning addons…');
   addons = [];
   renderAddons();
   try {
@@ -227,36 +227,36 @@ async function scan() {
     log(err.message || String(err), 'error');
     return [];
   } finally {
-    setBusy(false, 'Bereit');
+    setBusy(false, 'Ready');
   }
 }
 
 async function updateFolders(folders) {
-  setBusy(true, 'Aktualisiere…');
+  setBusy(true, 'Updating…');
   try {
     await api.update({ folders, force: els.forceUpdate.checked });
     await scan();
   } catch (err) {
     log(err.message || String(err), 'error');
-    setBusy(false, 'Bereit');
+    setBusy(false, 'Ready');
   }
 }
 
 async function updateAll() {
-  setBusy(true, 'Aktualisiere…');
+  setBusy(true, 'Updating…');
   try {
     await api.update({ force: els.forceUpdate.checked });
     await scan();
   } catch (err) {
     log(err.message || String(err), 'error');
-    setBusy(false, 'Bereit');
+    setBusy(false, 'Ready');
   }
 }
 
 async function addGit() {
   const url = els.gitUrl.value.trim();
   if (!url) return;
-  setBusy(true, 'Klone…');
+  setBusy(true, 'Cloning…');
   try {
     await api.install({ url, folder: els.gitFolder.value.trim() });
     els.gitUrl.value = '';
@@ -265,13 +265,13 @@ async function addGit() {
     await scan();
   } catch (err) {
     log(err.message || String(err), 'error');
-    setBusy(false, 'Bereit');
+    setBusy(false, 'Ready');
   }
 }
 
 async function launch() {
   try {
-    log('Starte Launcher / Client…', 'ok');
+    log('Starting launcher / client…', 'ok');
     await api.launch();
   } catch (err) {
     log(err.message || String(err), 'error');
@@ -364,9 +364,9 @@ els.gitUrl.addEventListener('keydown', (e) => {
 
 async function boot() {
   applyConfig(await api.getConfig());
-  log('QtAU gestartet');
+  log('QtAU started');
   if (!config.addonsDir) {
-    log('Bitte Addons-Ordner in den Einstellungen wählen', 'warn');
+    log('Please choose an AddOns folder in Settings', 'warn');
     openPanel('settings');
     return;
   }
@@ -376,10 +376,10 @@ async function boot() {
       (a) => a.status === 'outOfDate' || (config.forceUpdate && a.status === 'dirty')
     );
     if (pending.length) {
-      log(`${pending.length} Addon(s) werden aktualisiert`);
+      log(`Updating ${pending.length} addon(s)`);
       await updateAll();
     } else {
-      log('Alle Git-Addons sind aktuell', 'ok');
+      log('All git addons are up to date', 'ok');
     }
   }
   if (config.autoLaunch && config.launcherPath) {

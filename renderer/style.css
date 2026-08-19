@@ -193,7 +193,7 @@ input[type='text']:focus {
 
 .path-row {
   display: grid;
-  grid-template-columns: 130px 1fr auto;
+  grid-template-columns: 140px 1fr auto;
   gap: 8px;
   align-items: center;
   margin-bottom: 8px;

@@ -47,7 +47,7 @@ ipcMain.handle('config:set', (_e, patch) => config.set(patch || {}));
 
 ipcMain.handle('dialog:folder', async () => {
   const result = await dialog.showOpenDialog(win, {
-    title: 'Addons-Ordner wählen',
+    title: 'Choose AddOns folder',
     properties: ['openDirectory']
   });
   if (result.canceled || !result.filePaths[0]) return null;
@@ -56,7 +56,7 @@ ipcMain.handle('dialog:folder', async () => {
 
 ipcMain.handle('dialog:file', async () => {
   const result = await dialog.showOpenDialog(win, {
-    title: 'Launcher / Client wählen',
+    title: 'Choose launcher / client',
     properties: ['openFile'],
     filters: [{ name: 'Executable', extensions: ['exe'] }]
   });
@@ -99,7 +99,7 @@ ipcMain.handle('addons:install', async (_e, opts = {}) => {
 ipcMain.handle('launch', async () => {
   const cfg = config.get();
   if (!cfg.launcherPath || !fs.existsSync(cfg.launcherPath)) {
-    throw new Error('Launcher-Pfad nicht gesetzt oder Datei fehlt');
+    throw new Error('Launcher path is not set or the file is missing');
   }
   const child = spawn(cfg.launcherPath, [], {
     cwd: path.dirname(cfg.launcherPath),
