@@ -4,6 +4,8 @@ A small Windows tool that updates World of Warcraft addons from git, then starts
 
 It works with any client that uses a normal `Interface/AddOns` folder: Vanilla, private servers, custom clients, and similar.
 
+![QtAddonUpdater](screenshot.png)
+
 ## Download
 
 The compiled Windows build is on the [Releases](https://github.com/JercyJustice/QtAU/releases) page.
