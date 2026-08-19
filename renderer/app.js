@@ -51,6 +51,9 @@ function setBusy(value, label) {
   document.getElementById('scanBtn').disabled = value;
   document.getElementById('updateBtn').disabled = value;
   document.getElementById('addGit').disabled = value;
+  for (const btn of document.querySelectorAll('.addon-table .col-actions button')) {
+    btn.disabled = value;
+  }
 }
 
 function isOpen(name) {
@@ -131,18 +134,26 @@ function hideTooltip() {
 function renderAddons() {
   hideTooltip();
   els.addonCount.textContent = addons.length ? `${addons.length} found` : '';
+  els.addonList.innerHTML = '';
   if (!addons.length) {
-    els.addonList.innerHTML = '<div class="empty">No addons found. Choose an AddOns folder in Settings.</div>';
+    const row = document.createElement('tr');
+    const cell = document.createElement('td');
+    cell.colSpan = 4;
+    cell.className = 'empty';
+    cell.textContent = 'No addons found. Choose an AddOns folder in Settings.';
+    row.appendChild(cell);
+    els.addonList.appendChild(row);
     return;
   }
 
-  els.addonList.innerHTML = '';
   for (const addon of addons) {
-    const row = document.createElement('div');
-    row.className = 'addon';
+    const ignored = Boolean(config.ignored && config.ignored[addon.folder]);
+    const row = document.createElement('tr');
+    if (ignored) row.className = 'ignored';
 
-    const name = document.createElement('div');
-    name.innerHTML = `<strong>${escapeHtml(addon.title || addon.folder)}</strong>`;
+    const name = document.createElement('td');
+    name.className = 'name';
+    name.textContent = addon.title || addon.folder;
 
     const details = hoverText(addon);
     if (details) {
@@ -150,15 +161,33 @@ function renderAddons() {
       row.addEventListener('mouseleave', hideTooltip);
     }
 
-    const pill = document.createElement('div');
+    const ignoreCell = document.createElement('td');
+    ignoreCell.className = 'col-ignore';
+    const ignore = document.createElement('label');
+    ignore.className = 'ignore';
+    ignore.title = 'Skip this addon during automatic updates';
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = ignored;
+    box.addEventListener('change', async () => {
+      config = await api.setConfig({ ignored: { [addon.folder]: box.checked } });
+      renderAddons();
+    });
+    ignore.appendChild(box);
+    ignoreCell.appendChild(ignore);
+
+    const status = document.createElement('td');
+    status.className = 'col-status';
+    const pill = document.createElement('span');
     pill.className = `pill ${addon.status || 'local'}`;
     pill.textContent =
       addon.error && addon.status === 'error'
         ? addon.error
         : STATUS_LABEL[addon.status] || addon.status || '—';
+    status.appendChild(pill);
 
-    const actions = document.createElement('div');
-    actions.className = 'addon-actions';
+    const actions = document.createElement('td');
+    actions.className = 'col-actions';
     if (addon.status === 'outOfDate' || addon.status === 'dirty' || addon.status === 'error') {
       actions.appendChild(actionButton('Update', () => updateFolders([addon.folder])));
     }
@@ -173,7 +202,7 @@ function renderAddons() {
       );
     }
 
-    row.append(name, pill, actions);
+    row.append(name, ignoreCell, status, actions);
     els.addonList.appendChild(row);
   }
 }
@@ -349,7 +378,7 @@ for (const key of ['autoUpdate', 'autoLaunch', 'forceUpdate']) {
   });
 }
 
-els.addonList.addEventListener('scroll', hideTooltip);
+document.querySelector('.table-wrap').addEventListener('scroll', hideTooltip);
 
 document.getElementById('scanBtn').addEventListener('click', () => scan());
 document.getElementById('updateBtn').addEventListener('click', () => updateAll());
@@ -373,7 +402,9 @@ async function boot() {
   const listed = await scan();
   if (config.autoUpdate) {
     const pending = listed.filter(
-      (a) => a.status === 'outOfDate' || (config.forceUpdate && a.status === 'dirty')
+      (a) =>
+        !config.ignored?.[a.folder] &&
+        (a.status === 'outOfDate' || (config.forceUpdate && a.status === 'dirty'))
     );
     if (pending.length) {
       log(`Updating ${pending.length} addon(s)`);

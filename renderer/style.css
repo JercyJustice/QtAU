@@ -108,30 +108,91 @@ h2 {
   color: var(--gold);
 }
 
-.addon-list {
+.table-wrap {
+  min-height: 0;
   overflow: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.addon {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 8px;
-  align-items: center;
-  background: var(--panel-2);
-  border: 1px solid transparent;
-  padding: 8px 10px;
+  border: 1px solid var(--border);
   border-radius: 3px;
 }
 
-.addon:hover {
-  border-color: var(--border);
+.addon-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
 }
 
-.addon strong {
+.addon-table th,
+.addon-table td {
+  padding: 7px 10px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.addon-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #161310;
+  color: var(--muted);
+  font-size: 11px;
   font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+}
+
+.addon-table tbody td {
+  border-bottom: 1px solid #2a241d;
+  background: var(--panel-2);
+}
+
+.addon-table tbody tr:hover td {
+  background: #2a241c;
+}
+
+.addon-table tbody tr.ignored td {
+  opacity: 0.65;
+}
+
+.addon-table .col-ignore {
+  width: 140px;
+  text-align: center;
+}
+
+.addon-table .col-status {
+  width: 130px;
+}
+
+.addon-table .col-actions {
+  width: 88px;
+  text-align: right;
+}
+
+.addon-table td.col-ignore,
+.addon-table td.col-status,
+.addon-table td.col-actions {
+  text-align: inherit;
+}
+
+.addon-table td.col-ignore {
+  text-align: center;
+}
+
+.addon-table td.col-actions {
+  text-align: right;
+}
+
+.addon-table .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.ignore {
+  display: inline-flex;
+  justify-content: center;
+  cursor: pointer;
 }
 
 .addon-tooltip {
@@ -155,6 +216,7 @@ h2 {
 }
 
 .pill {
+  display: inline-block;
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 99px;
@@ -298,8 +360,9 @@ button:disabled {
 
 .empty {
   color: var(--muted);
-  padding: 18px 8px;
+  padding: 28px 8px;
   text-align: center;
+  font-weight: 400;
 }
 
 .overlay {

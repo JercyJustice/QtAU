@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'" />
-    <title>QtAU</title>
+    <title>QtAddonUpdater</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -31,7 +31,19 @@
           <h2>Addons</h2>
           <span id="addonCount" class="muted"></span>
         </div>
-        <div id="addonList" class="addon-list"></div>
+        <div class="table-wrap">
+          <table class="addon-table">
+            <thead>
+              <tr>
+                <th>Addon</th>
+                <th class="col-ignore">Ignore updates</th>
+                <th class="col-status">Status</th>
+                <th class="col-actions"></th>
+              </tr>
+            </thead>
+            <tbody id="addonList"></tbody>
+          </table>
+        </div>
       </section>
 
       <footer class="footer">

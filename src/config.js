@@ -10,10 +10,11 @@ const DEFAULT_LAUNCHER =
 const DEFAULTS = {
   addonsDir: '',
   launcherPath: '',
-  autoUpdate: true,
+  autoUpdate: false,
   autoLaunch: false,
   forceUpdate: false,
-  bindings: {}
+  bindings: {},
+  ignored: {}
 };
 
 function exists(p) {
@@ -41,8 +42,15 @@ function withDetectedDefaults(cfg) {
 function load() {
   try {
     const raw = fs.readFileSync(filePath(), 'utf8');
-    data = withDetectedDefaults({ ...DEFAULTS, ...JSON.parse(raw) });
+    const parsed = JSON.parse(raw);
+    const firstIgnoreSupport = parsed.ignored == null;
+    data = withDetectedDefaults({ ...DEFAULTS, ...parsed });
     if (!data.bindings || typeof data.bindings !== 'object') data.bindings = {};
+    if (!data.ignored || typeof data.ignored !== 'object') data.ignored = {};
+    if (firstIgnoreSupport) {
+      data.autoUpdate = false;
+      save();
+    }
   } catch {
     data = withDetectedDefaults({ ...DEFAULTS });
   }
@@ -64,7 +72,11 @@ function set(patch) {
     patch.bindings && typeof patch.bindings === 'object'
       ? { ...data.bindings, ...patch.bindings }
       : data.bindings;
-  data = { ...data, ...patch, bindings };
+  const ignored =
+    patch.ignored && typeof patch.ignored === 'object'
+      ? { ...data.ignored, ...patch.ignored }
+      : data.ignored;
+  data = { ...data, ...patch, bindings, ignored };
   save();
   return data;
 }

@@ -352,10 +352,11 @@ async function updateOne(addonsDir, folder, { force, bindings, onProgress }) {
   }
 }
 
-async function update(addonsDir, { folders, force = false, bindings = {}, onProgress } = {}) {
+async function update(addonsDir, { folders, force = false, bindings = {}, ignored = {}, skipIgnored = false, onProgress } = {}) {
   const emit = (payload) => onProgress && onProgress(payload);
   if (!addonsDir) return { results: [], error: 'No AddOns folder set' };
 
+  const isIgnored = (folder) => ignored && ignored[folder] === true;
   let targets = folders;
   if (!targets || !targets.length) {
     const listed = await listFolders(addonsDir);
@@ -366,6 +367,13 @@ async function update(addonsDir, { folders, force = false, bindings = {}, onProg
     targets = inspected
       .filter((a) => a.status === 'outOfDate' || (force && a.status === 'dirty'))
       .map((a) => a.folder);
+  }
+  if (skipIgnored) {
+    targets = targets.filter((folder) => {
+      if (!isIgnored(folder)) return true;
+      emit({ type: 'log', level: 'info', message: `${folder}: ignored` });
+      return false;
+    });
   }
 
   if (!targets.length) {

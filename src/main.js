@@ -17,9 +17,10 @@ function send(channel, data) {
 function createWindow() {
   win = new BrowserWindow({
     width: 840,
-    height: 760,
+    height: 620,
     minWidth: 720,
-    minHeight: 580,
+    minHeight: 480,
+    title: 'QtAddonUpdater',
     backgroundColor: '#100e0c',
     autoHideMenuBar: true,
     show: false,
@@ -78,6 +79,8 @@ ipcMain.handle('addons:update', async (_e, opts = {}) => {
     folders: opts.folders,
     force: Boolean(opts.force ?? cfg.forceUpdate),
     bindings: cfg.bindings,
+    ignored: cfg.ignored,
+    skipIgnored: !opts.folders,
     onProgress: (p) => send('addons:progress', p)
   });
 });
