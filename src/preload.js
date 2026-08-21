@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('qtau', {
   scan: () => ipcRenderer.invoke('addons:scan'),
   update: (opts) => ipcRenderer.invoke('addons:update', opts),
   install: (opts) => ipcRenderer.invoke('addons:install', opts),
+  remove: (folder) => ipcRenderer.invoke('addons:remove', folder),
+  openFolder: () => ipcRenderer.invoke('addons:openFolder'),
   launch: () => ipcRenderer.invoke('launch'),
   onProgress: (cb) => {
     const listener = (_event, data) => cb(data);

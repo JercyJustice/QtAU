@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -97,6 +97,33 @@ ipcMain.handle('addons:install', async (_e, opts = {}) => {
     config.set({ bindings: { [result.folder]: result.git } });
   }
   return result;
+});
+
+ipcMain.handle('addons:remove', async (_e, folder) => {
+  const cfg = config.get();
+  const result = await dialog.showMessageBox(win, {
+    type: 'warning',
+    buttons: ['Delete', 'Cancel'],
+    defaultId: 1,
+    cancelId: 1,
+    title: 'Delete addon',
+    message: `Delete "${folder}" from the AddOns folder?`,
+    detail: 'The folder is removed from disk. This cannot be undone.'
+  });
+  if (result.response !== 0) return { ok: false, cancelled: true };
+  await addons.remove(cfg.addonsDir, folder);
+  config.set({ ignored: { [folder]: false } });
+  return { ok: true, folder };
+});
+
+ipcMain.handle('addons:openFolder', async () => {
+  const dir = config.get().addonsDir;
+  if (!dir || !fs.existsSync(dir)) {
+    throw new Error('AddOns folder is not set or does not exist');
+  }
+  const err = await shell.openPath(dir);
+  if (err) throw new Error(err);
+  return { ok: true };
 });
 
 ipcMain.handle('launch', async () => {

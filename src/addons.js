@@ -5,18 +5,37 @@ const git = require('isomorphic-git');
 const http = require('isomorphic-git/http/node');
 
 const AUTHOR = { name: 'QtAU', email: 'qtau@local' };
+const GIT_HEADERS = { 'User-Agent': 'git/isomorphic-git QtAU' };
 
 function isUnsafeFolder(name) {
   return !name || name === '.' || name === '..' || /[/\\]/.test(name) || name.startsWith('.');
 }
 
+function gitErrorMessage(err) {
+  if (!err) return 'Unknown git error';
+  const extra = err.data && (err.data.response || err.data.message || err.data);
+  const hint = typeof extra === 'string' && extra.trim() ? ` (${extra.trim().slice(0, 180)})` : '';
+  return `${err.message || String(err)}${hint}`;
+}
+
 function normalizeGitUrl(input) {
   let url = String(input || '').trim();
   if (!url) throw new Error('Empty git URL');
-  url = url.replace(/\/+$/, '');
-  if (!url.endsWith('.git')) url += '.git';
-  const parsed = new URL(url);
+  const ssh = url.match(/^git@([^:]+):(.+?)(?:\.git)?$/i);
+  if (ssh) url = `https://${ssh[1]}/${ssh[2]}`;
+  url = url.replace(/\/+$/, '').replace(/\.git$/i, '');
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error('Invalid git URL');
+  }
   if (parsed.protocol !== 'https:') throw new Error('Only HTTPS git URLs are allowed');
+  const parts = parsed.pathname.split('/').filter(Boolean);
+  if (parts.length >= 2) parsed.pathname = `/${parts[0]}/${parts[1]}.git`;
+  else parsed.pathname = `${parsed.pathname.replace(/\/+$/, '')}.git`;
+  parsed.search = '';
+  parsed.hash = '';
   return parsed.href.replace(/\/+$/, '');
 }
 
@@ -162,7 +181,15 @@ async function inspectAddon(addonsDir, folder, bindings) {
   info.branch = await currentBranch(dir);
 
   try {
-    await git.fetch({ fs, http, dir, remote: remote.remote, tags: true, singleBranch: false });
+    await git.fetch({
+      fs,
+      http,
+      dir,
+      remote: remote.remote,
+      tags: true,
+      singleBranch: false,
+      headers: GIT_HEADERS
+    });
     const dirty = await isDirty(dir);
     const localOid = await resolveOid(dir, 'HEAD');
     const remoteOid =
@@ -181,7 +208,7 @@ async function inspectAddon(addonsDir, folder, bindings) {
     return {
       ...info,
       status: 'error',
-      error: err && err.message ? err.message : 'Verify failed'
+      error: gitErrorMessage(err)
     };
   }
 }
@@ -245,7 +272,8 @@ async function cloneReplace(dir, url, ref, onProgress) {
     dir: tmpDir,
     url,
     ref: ref || undefined,
-    singleBranch: !ref || ref === 'master' || ref === 'main',
+    singleBranch: true,
+    headers: GIT_HEADERS,
     onProgress: (p) =>
       onProgress &&
       onProgress({
@@ -298,6 +326,7 @@ async function pullAddon(dir, remoteName, branch, force, onProgress, folder) {
     remote: remoteName,
     singleBranch: true,
     author: AUTHOR,
+    headers: GIT_HEADERS,
     onProgress: progress
   });
 }
@@ -331,7 +360,14 @@ async function updateOne(addonsDir, folder, { force, bindings, onProgress }) {
         return addon;
       }
       const branch = await currentBranch(dir);
-      await git.fetch({ fs, http, dir, remote: remote.remote, tags: true });
+      await git.fetch({
+        fs,
+        http,
+        dir,
+        remote: remote.remote,
+        tags: true,
+        headers: GIT_HEADERS
+      });
       await pullAddon(dir, remote.remote, branch, force, onProgress, folder);
     }
 
@@ -340,7 +376,7 @@ async function updateOne(addonsDir, folder, { force, bindings, onProgress }) {
     emit({ type: 'log', level: 'ok', message: `${folder}: updated` });
     return { ...addon, status: 'upToDate' };
   } catch (err) {
-    const message = err && err.message ? err.message : String(err);
+    const message = gitErrorMessage(err);
     const addon = {
       folder,
       status: 'error',
@@ -401,40 +437,68 @@ async function install(addonsDir, url, folderName, onProgress) {
   if (isUnsafeFolder(folder)) throw new Error(`Invalid folder name: ${folder}`);
 
   emit({ type: 'log', level: 'info', message: `Cloning ${gitUrl} → ${folder}` });
-  emit({ type: 'addon', addon: { folder, title: folder, git: gitUrl, status: 'updating' } });
+  emit({
+    type: 'addon',
+    addon: { folder, title: folder, git: gitUrl, status: 'updating', error: 'Cloning…' }
+  });
   emit({ type: 'busy', value: true, label: `Cloning ${folder}…` });
 
   const dir = path.join(addonsDir, folder);
-  if (await pathExists(path.join(dir, '.git'))) {
-    const updated = await updateOne(addonsDir, folder, {
-      force: false,
-      bindings: { [folder]: gitUrl },
-      onProgress
-    });
-    return { ok: true, folder, git: gitUrl, addon: updated };
-  }
-  let ref;
   try {
-    const info = await git.getRemoteInfo({ http, url: gitUrl });
-    if (info.HEAD && info.HEAD.startsWith('refs/heads/')) {
-      ref = info.HEAD.slice('refs/heads/'.length);
+    if (await pathExists(path.join(dir, '.git'))) {
+      const updated = await updateOne(addonsDir, folder, {
+        force: false,
+        bindings: { [folder]: gitUrl },
+        onProgress
+      });
+      emit({ type: 'busy', value: false, label: 'Ready' });
+      return { ok: true, folder, git: gitUrl, addon: updated };
     }
-  } catch {
-    ref = undefined;
-  }
 
-  await cloneReplace(dir, gitUrl, ref, onProgress);
-  const addon = await inspectAddon(addonsDir, folder, { [folder]: gitUrl });
-  emit({ type: 'addon', addon });
-  emit({ type: 'log', level: 'ok', message: `${folder}: installed` });
-  emit({ type: 'busy', value: false, label: 'Ready' });
-  return { ok: true, folder, git: gitUrl, addon };
+    await cloneReplace(dir, gitUrl, undefined, onProgress);
+    const tocPath = path.join(dir, `${folder}.toc`);
+    let toc = {};
+    if (await pathExists(tocPath)) toc = readToc(await fsp.readFile(tocPath, 'utf8'));
+    const addon = {
+      folder,
+      title: stripWow(toc.Title) || folder,
+      version: toc.Version || '',
+      author: stripWow(toc.Author) || '',
+      notes: stripWow(toc.Notes) || '',
+      git: gitUrl,
+      status: 'upToDate'
+    };
+    emit({ type: 'addon', addon });
+    emit({ type: 'log', level: 'ok', message: `${folder}: installed` });
+    emit({ type: 'busy', value: false, label: 'Ready' });
+    return { ok: true, folder, git: gitUrl, addon };
+  } catch (err) {
+    const message = gitErrorMessage(err);
+    emit({ type: 'addon', addon: { folder, title: folder, git: gitUrl, status: 'error', error: message } });
+    emit({ type: 'log', level: 'error', message: `${folder}: ${message}` });
+    emit({ type: 'busy', value: false, label: 'Ready' });
+    throw err;
+  }
+}
+
+async function remove(addonsDir, folder) {
+  if (isUnsafeFolder(folder)) throw new Error(`Invalid folder name: ${folder}`);
+  if (!addonsDir) throw new Error('No AddOns folder set');
+  const dir = path.join(addonsDir, folder);
+  const resolved = path.resolve(dir).toLowerCase();
+  const root = path.resolve(addonsDir).toLowerCase();
+  if (resolved === root || !resolved.startsWith(root + path.sep.toLowerCase())) {
+    throw new Error('Refusing to delete outside the AddOns folder');
+  }
+  if (!(await pathExists(dir))) throw new Error(`Folder not found: ${folder}`);
+  await fsp.rm(dir, { recursive: true, force: true });
 }
 
 module.exports = {
   scan,
   update,
   install,
+  remove,
   normalizeGitUrl,
   folderFromUrl
 };

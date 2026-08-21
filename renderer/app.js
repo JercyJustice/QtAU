@@ -180,10 +180,13 @@ function renderAddons() {
     status.className = 'col-status';
     const pill = document.createElement('span');
     pill.className = `pill ${addon.status || 'local'}`;
-    pill.textContent =
-      addon.error && addon.status === 'error'
-        ? addon.error
-        : STATUS_LABEL[addon.status] || addon.status || '—';
+    if ((addon.status === 'updating' || addon.status === 'checking') && addon.error) {
+      pill.textContent = addon.error;
+    } else if (addon.status === 'error' && addon.error) {
+      pill.textContent = addon.error;
+    } else {
+      pill.textContent = STATUS_LABEL[addon.status] || addon.status || '—';
+    }
     status.appendChild(pill);
 
     const actions = document.createElement('td');
@@ -201,6 +204,9 @@ function renderAddons() {
         })
       );
     }
+    if (addon.folder) {
+      actions.appendChild(actionButton('Delete', () => removeAddon(addon.folder)));
+    }
 
     row.append(name, ignoreCell, status, actions);
     els.addonList.appendChild(row);
@@ -210,7 +216,7 @@ function renderAddons() {
 function actionButton(label, onClick) {
   const btn = document.createElement('button');
   btn.type = 'button';
-  btn.className = 'ghost tiny';
+  btn.className = 'ghost tiny row-action';
   btn.textContent = label;
   btn.disabled = busy;
   btn.addEventListener('click', onClick);
@@ -285,16 +291,42 @@ async function updateAll() {
 async function addGit() {
   const url = els.gitUrl.value.trim();
   if (!url) return;
+  const folder = els.gitFolder.value.trim();
+  closePanel('git');
+  els.gitUrl.value = '';
+  els.gitFolder.value = '';
   setBusy(true, 'Cloning…');
   try {
-    await api.install({ url, folder: els.gitFolder.value.trim() });
-    els.gitUrl.value = '';
-    els.gitFolder.value = '';
-    closePanel('git');
-    await scan();
+    await api.install({ url, folder });
   } catch (err) {
     log(err.message || String(err), 'error');
+    els.gitUrl.value = url;
+    els.gitFolder.value = folder;
+    openPanel('git');
+  } finally {
     setBusy(false, 'Ready');
+  }
+}
+
+async function removeAddon(folder) {
+  hideTooltip();
+  try {
+    const result = await api.remove(folder);
+    if (!result || result.cancelled) return;
+    addons = addons.filter((a) => a.folder !== folder);
+    if (config.ignored) config.ignored[folder] = false;
+    renderAddons();
+    log(`${folder}: deleted`, 'ok');
+  } catch (err) {
+    log(err.message || String(err), 'error');
+  }
+}
+
+async function openAddonsFolder() {
+  try {
+    await api.openFolder();
+  } catch (err) {
+    log(err.message || String(err), 'error');
   }
 }
 
@@ -313,10 +345,11 @@ api.onProgress((payload) => {
   if (payload.type === 'addon') upsertAddon(payload.addon);
   if (payload.type === 'busy') setBusy(payload.value, payload.label);
   if (payload.type === 'progress' && payload.folder) {
+    const pct = payload.percent == null ? '' : ` ${payload.percent}%`;
     upsertAddon({
       folder: payload.folder,
       status: 'updating',
-      error: payload.phase ? `${payload.phase} ${payload.percent ?? ''}%`.trim() : ''
+      error: `${payload.phase || 'Updating'}…${pct}`.replace('……', '…')
     });
   }
 });
@@ -380,6 +413,7 @@ for (const key of ['autoUpdate', 'autoLaunch', 'forceUpdate']) {
 
 document.querySelector('.table-wrap').addEventListener('scroll', hideTooltip);
 
+document.getElementById('openFolderBtn').addEventListener('click', () => openAddonsFolder());
 document.getElementById('scanBtn').addEventListener('click', () => scan());
 document.getElementById('updateBtn').addEventListener('click', () => updateAll());
 document.getElementById('playBtn').addEventListener('click', () => launch());
