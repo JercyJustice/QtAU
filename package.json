@@ -1,7 +1,7 @@
 {
   "name": "qtau",
   "productName": "QtAU",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "QtAU — Qt AddonUpdater. Updates git-based WoW addons and starts your launcher or client.",
   "author": "JercyJustice",
   "main": "src/main.js",
